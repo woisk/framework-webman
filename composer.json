@@ -1,5 +1,5 @@
 {
-  "name": "woisks/framework-webman",
+  "name": "woisk/framework-webman",
   "type": "library",
   "require": {
     "php": "^8.1",
