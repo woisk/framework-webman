@@ -147,7 +147,7 @@ class Application extends Container
         // 当找不到路由、控制器和操作时，请尝试使用route:：fallback
         return Route::getFallback()
             ?: function () {
-                return json(['app-155-404', '路由不存在']);
+                return res('route error', '路径不存在');
             };
     }
 
