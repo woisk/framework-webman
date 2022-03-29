@@ -18,7 +18,6 @@ use Webman\Exception\FileException;
 
 class File extends \SplFileInfo
 {
-
     /**
      * @param $destination
      * @return File
