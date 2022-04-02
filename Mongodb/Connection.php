@@ -3,7 +3,7 @@
 namespace Webman\Mongodb;
 
 use Jenssegers\Mongodb\Connection as JenssegersConnection;
-use MongoDB\Driver\Session;
+
 
 /**
  * Connection
@@ -11,17 +11,11 @@ use MongoDB\Driver\Session;
  ***/
 class Connection extends JenssegersConnection
 {
-    /**
-     * @var Session
-     */
-    protected Session $session;
+
+    protected $session;
 
 
-    /**
-     * @param array $options
-     ********************************************
-     * @return void
-     */
+
     public function beginTransaction(array $options = [])
     {
         if (!$this->getSession()) {
@@ -31,10 +25,7 @@ class Connection extends JenssegersConnection
     }
 
 
-    /**
-     ********************************************
-     * @return void
-     */
+
     public function commit()
     {
         if ($this->getSession()) {
@@ -44,11 +35,7 @@ class Connection extends JenssegersConnection
     }
 
 
-    /**
-     * @param $toLevel
-     ********************************************
-     * @return void
-     */
+
     public function rollBack($toLevel = null)
     {
         if ($this->getSession()) {
@@ -58,32 +45,22 @@ class Connection extends JenssegersConnection
     }
 
 
-    /**
-     ********************************************
-     * @return void
-     */
+
     protected function clearSession()
     {
         $this->session = null;
     }
 
 
-    /**
-     * @param $collection
-     ********************************************
-     * @return \Jenssegers\Mongodb\Query\Builder|\Webman\Mongodb\Builder
-     */
-    public function collection($collection): \Jenssegers\Mongodb\Query\Builder|\Webman\Mongodb\Builder
+
+    public function collection($collection)
     {
         $query = new Builder($this, $this->getPostProcessor());
 
         return $query->from($collection);
     }
 
-    /**
-     ********************************************
-     * @return Session
-     */
+
     public function getSession()
     {
         return $this->session;
