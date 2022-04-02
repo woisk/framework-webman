@@ -1,23 +1,41 @@
 <?php
-declare(strict_types=1);
+/**
+ * This file is part of webman.
+ *
+ * Licensed under The MIT License
+ * For full copyright and license information, please see the MIT-LICENSE.txt
+ * Redistributions of files must retain the above copyright notice.
+ *
+ * @author    walkor<walkor@workerman.net>
+ * @copyright walkor<walkor@workerman.net>
+ * @link      http://www.workerman.net/
+ * @license   http://www.opensource.org/licenses/mit-license.php MIT License
+ */
 
-namespace Webman\Support;
+namespace Webman\Bootstrap;
 
 use Illuminate\Container\Container;
 use Illuminate\Database\Capsule\Manager as Capsule;
 use Illuminate\Events\Dispatcher;
-use Illuminate\Support\Facades\DB;
-use Jenssegers\Mongodb\Connection;
+use Webman\Bootstrap;
+use Webman\Mongodb\Connection;
+use Webman\Support\DB;
 use Workerman\Timer;
 use Workerman\Worker;
 
-class LaravelDb
+
+/**
+ * Class Laravel
+ * @package Support\Bootstrap
+ */
+class LaravelDb implements Bootstrap
 {
     /**
      * @param Worker $worker
+     *
      * @return void
      */
-    public static function instance($worker)
+    public static function start($worker)
     {
         if (!class_exists('\Illuminate\Database\Capsule\Manager')) {
             return;
@@ -27,7 +45,6 @@ class LaravelDb
         if (!$connections) {
             return;
         }
-
 
         $capsule = new Capsule;
         $configs = config('database');
@@ -55,12 +72,12 @@ class LaravelDb
 
         $capsule->bootEloquent();
 
-        //Heartbeat
+        // Heartbeat
         if ($worker) {
             Timer::add(55, function () use ($connections) {
                 foreach ($connections as $key => $item) {
                     if ($item['driver'] == 'mysql') {
-                        Db::connection($key)->select('select 1');
+                        DB::connection($key)->select('select 1');
                     }
                 }
             });

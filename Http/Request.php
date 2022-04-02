@@ -13,7 +13,7 @@
  */
 namespace Webman\Http;
 
-use Webman\Application;
+use Webman\App;
 use Webman\Route\Route;
 use Webman\Http\UploadFile;
 
@@ -155,7 +155,7 @@ class Request extends \Workerman\Protocols\Http\Request
      */
     public function getRemoteIp()
     {
-        return Application::connection()->getRemoteIp();
+        return App::connection()->getRemoteIp();
     }
 
     /**
@@ -163,7 +163,7 @@ class Request extends \Workerman\Protocols\Http\Request
      */
     public function getRemotePort()
     {
-        return Application::connection()->getRemotePort();
+        return App::connection()->getRemotePort();
     }
 
     /**
@@ -171,7 +171,7 @@ class Request extends \Workerman\Protocols\Http\Request
      */
     public function getLocalIp()
     {
-        return Application::connection()->getLocalIp();
+        return App::connection()->getLocalIp();
     }
 
     /**
@@ -179,7 +179,7 @@ class Request extends \Workerman\Protocols\Http\Request
      */
     public function getLocalPort()
     {
-        return Application::connection()->getLocalPort();
+        return App::connection()->getLocalPort();
     }
 
     /**
@@ -195,12 +195,6 @@ class Request extends \Workerman\Protocols\Http\Request
         return $this->header('client-ip', $this->header('x-forwarded-for',
                    $this->header('x-real-ip', $this->header('x-client-ip',
                    $this->header('via', $remote_ip)))));
-    }
-
-    public function query()
-    {
-        $querys = $this->queryString();
-//        foreach ($querys)
     }
 
     /**
@@ -248,7 +242,7 @@ class Request extends \Workerman\Protocols\Http\Request
      */
     public function acceptJson()
     {
-        return false !== strpos($this->header('accept'), 'json');
+        return false !== strpos($this->header('accept', ''), 'json');
     }
 
     /**

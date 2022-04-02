@@ -14,12 +14,12 @@
 
 namespace Webman\Support;
 
-use Illuminate\Redis\RedisManager;
 use Workerman\Timer;
+use Illuminate\Redis\RedisManager;
 
 /**
  * Class Redis
- * @package Webman\Support
+ * @package Support
  *
  * Strings methods
  * @method static int append($key, $value)
@@ -225,7 +225,6 @@ class Redis
      */
     public static function connection($name = 'default')
     {
-//        return static::instance()->connection($name);
         static $timers = [];
         $connection = static::instance()->connection($name);
         if (!isset($timers[$name])) {
@@ -243,6 +242,6 @@ class Redis
      */
     public static function __callStatic($name, $arguments)
     {
-        return static::instance()->connection('default')->{$name}(... $arguments);
+        return static::connection('default')->{$name}(... $arguments);
     }
 }

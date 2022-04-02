@@ -103,7 +103,7 @@ class Config
     {
         $files = [];
 
-        $configPath = realpath(config_path());
+        $configPath = config_path();
 
         foreach (Finder::create()->files()->name('*.php')->in($configPath) as $file) {
             $directory = static::getNestedDirectory($file, $configPath);

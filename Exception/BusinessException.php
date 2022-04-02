@@ -18,7 +18,7 @@ use Exception;
 
 /**
  * Class BusinessException
- * @package Webman\Exception
+ * @package Support\exception
  */
 class BusinessException extends Exception
 {

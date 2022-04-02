@@ -1,8 +1,8 @@
 <?php
+
 namespace Webman;
 
 use Psr\Container\ContainerInterface;
-use Webman\Application;
 
 /**
  * This file is part of webman.
@@ -16,7 +16,6 @@ use Webman\Application;
  * @link      http://www.workerman.net/
  * @license   http://www.opensource.org/licenses/mit-license.php MIT License
  */
-
 class Middleware
 {
     /**
@@ -83,7 +82,7 @@ class Middleware
             static::$_container = $container;
         }
         if (!static::$_container) {
-            static::$_container = Application::container();
+            static::$_container = App::container();
         }
         return static::$_container;
     }

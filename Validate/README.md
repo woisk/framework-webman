@@ -3,11 +3,13 @@
 基于PHP7.1+ 的Validate实现
 
 ## 安装
+
 ~~~
 composer require topthink/think-validate
 ~~~
 
 ## 用法
+
 ~~~php
 use think\facade\Validate;
 
@@ -27,6 +29,7 @@ if (!$validate->check($data)) {
 ~~~
 
 支持创建验证器进行数据验证
+
 ~~~php
 <?php
 namespace app\index\validate;
@@ -53,6 +56,7 @@ class User extends Validate
 ~~~
 
 验证器调用代码如下：
+
 ~~~php
 $data = [
     'name'  => 'thinkphp',

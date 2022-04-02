@@ -1,23 +1,10 @@
 <?php
-/**
- * This file is part of webman.
- *
- * Licensed under The MIT License
- * For full copyright and license information, please see the MIT-LICENSE.txt
- * Redistributions of files must retain the above copyright notice.
- *
- * @author    walkor<walkor@workerman.net>
- * @copyright walkor<walkor@workerman.net>
- * @link      http://www.workerman.net/
- * @license   http://www.opensource.org/licenses/mit-license.php MIT License
- */
 
 namespace Webman;
 
 use FastRoute\Dispatcher\GroupCountBased;
 use FastRoute\RouteCollector;
 use Psr\Container\ContainerInterface;
-use Webman\Container\Container;
 use Webman\Route\Route as RouteObject;
 use function FastRoute\simpleDispatcher;
 
@@ -157,7 +144,7 @@ class Route
      * @param $callback
      * @return RouteObject
      */
-    public static function any($path, $callback)
+    public static function any($path, $callback): RouteObject
     {
         return static::addRoute(['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'], $path, $callback);
     }
@@ -168,7 +155,7 @@ class Route
      * @param $callback
      * @return RouteObject
      */
-    public static function add($method, $path, $callback)
+    public static function add($method, $path, $callback): RouteObject
     {
         return static::addRoute($method, $path, $callback);
     }
@@ -176,10 +163,14 @@ class Route
     /**
      * @param $path
      * @param $callback
-     * @return Route
+     ********************************************
+     * @return static
      */
-    public static function group($path, $callback)
+    public static function group($path, $callback): static
     {
+        if ($path === '' || $path[0] !== '/') {
+            $path = "/$path";
+        }
         $previous_group_prefix = static::$_groupPrefix;
         static::$_groupPrefix = $previous_group_prefix . $path;
         $instance = static::$_instance = new static;
@@ -229,7 +220,7 @@ class Route
     /**
      * @return array
      */
-    public static function getRoutes()
+    public static function getRoutes(): array
     {
         return static::$_allRoutes;
     }
@@ -245,20 +236,22 @@ class Route
     /**
      * @return bool
      */
-    public static function hasDisableDefaultRoute()
+    public static function hasDisableDefaultRoute(): bool
     {
         return static::$_disableDefaultRoute === true;
     }
 
     /**
      * @param $middleware
-     * @return $this
+     ********************************************
+     * @return void
      */
     public function middleware($middleware)
     {
         foreach ($this->_routes as $route) {
             $route->middleware($middleware);
         }
+
     }
 
     /**
@@ -282,7 +275,7 @@ class Route
      * @param $name
      * @return null|RouteObject
      */
-    public static function getByName($name)
+    public static function getByName($name): ?RouteObject
     {
         return static::$_nameList[$name] ?? null;
     }
@@ -293,7 +286,7 @@ class Route
      * @param $path
      * @return array
      */
-    public static function dispatch($method, $path)
+    public static function dispatch($method, $path): array
     {
         return static::$_dispatcher->dispatch($method, $path);
     }
@@ -303,7 +296,7 @@ class Route
      * @param $callback
      * @return array|bool|callable
      */
-    public static function convertToCallable($path, $callback)
+    public static function convertToCallable($path, $callback): callable|bool|array
     {
         if (\is_string($callback) && \strpos($callback, '@')) {
             $callback = \explode('@', $callback, 2);
@@ -330,8 +323,11 @@ class Route
      * @param $callback
      * @return RouteObject
      */
-    protected static function addRoute($methods, $path, $callback)
+    protected static function addRoute($methods, $path, $callback): RouteObject
     {
+        if ($path === '' || $path[0] !== '/') {
+            $path = "/$path";
+        }
         static::$_hasRoute = true;
         $route = new RouteObject($methods, static::$_groupPrefix . $path, $callback);
         static::$_allRoutes[] = $route;
@@ -346,19 +342,16 @@ class Route
     }
 
     /**
-     *  载入路由文件
      * @return bool
      */
-    public static function load()
+    public static function load(): bool
     {
-
         static::$_dispatcher = simpleDispatcher(function (RouteCollector $route) {
             Route::setCollector($route);
-            $route_config_file = base_path() . '/routes/route.php';
+            $route_config_file = base_path() . './routes/route.php';
             if (\is_file($route_config_file)) {
                 require_once $route_config_file;
             }
-
         });
         return static::$_hasRoute;
     }
@@ -384,22 +377,22 @@ class Route
     /**
      * @return callable|null
      */
-    public static function getFallback()
+    public static function getFallback(): ?callable
     {
         return is_callable(static::$_fallback) ? static::$_fallback : null;
     }
 
     /**
-     * @param $container
-     * @return ContainerInterface
+     * @param null $container
+     * @return ContainerInterface|null
      */
-    public static function container($container = null)
+    public static function container($container = null): ?ContainerInterface
     {
         if ($container) {
             static::$_container = $container;
         }
         if (!static::$_container) {
-            static::$_container = new Container();
+            static::$_container = App::container();
         }
         return static::$_container;
     }

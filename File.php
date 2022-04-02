@@ -11,13 +11,13 @@
  * @link      http://www.workerman.net/
  * @license   http://www.opensource.org/licenses/mit-license.php MIT License
  */
-
 namespace Webman;
 
 use Webman\Exception\FileException;
 
 class File extends \SplFileInfo
 {
+
     /**
      * @param $destination
      * @return File

@@ -1,7 +1,10 @@
 <?php
 declare(strict_types=1);
 
-namespace Webman\Validate;
+namespace Webman;
+
+use Webman\Validate\ValidateException;
+use Webman\Validate\ValidateRule;
 
 /**
  * 数据验证类

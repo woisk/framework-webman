@@ -17,9 +17,8 @@ namespace Webman;
 use FastRoute\Dispatcher;
 use Monolog\Logger;
 use Psr\Container\ContainerInterface;
-use Webman\Container\Container;
+use Webman\Exception\ExceptionHandler;
 use Webman\Exception\ExceptionHandlerInterface;
-use Webman\Exception\Handler;
 use Webman\Http\Request;
 use Webman\Http\Response;
 use Webman\Route\Route as RouteObject;
@@ -27,11 +26,22 @@ use Workerman\Connection\TcpConnection;
 use Workerman\Worker;
 
 /**
- * Class Application
+ * Class App
  * @package Webman
  */
-class Application extends Container
+class App
 {
+
+    /**
+     * @var bool
+     */
+    protected static $_supportStaticFiles = true;
+
+    /**
+     * @var bool
+     */
+    protected static $_supportPHPFiles = false;
+
     /**
      * @var array
      */
@@ -42,11 +52,30 @@ class Application extends Container
      */
     protected static $_worker = null;
 
+    /**
+     * @var ContainerInterface
+     */
+    protected static $_container = null;
 
     /**
      * @var Logger
      */
     protected static $_logger = null;
+
+    /**
+     * @var string
+     */
+    protected static $_appPath = '';
+
+    /**
+     * @var string
+     */
+    protected static $_publicPath = '';
+
+    /**
+     * @var string
+     */
+    protected static $_configPath = '';
 
     /**
      * @var TcpConnection
@@ -59,17 +88,33 @@ class Application extends Container
     protected static $_request = null;
 
     /**
-     * Application constructor.
-     * @param Worker $worker
-     * @param $logger
+     * @var int
      */
-    public function __construct(Worker $worker, $logger,)
+    protected static $_gracefulStopTimer = null;
+
+    /**
+     * App constructor.
+     * @param Worker $worker
+     * @param $container
+     * @param $logger
+     * @param $app_path
+     * @param $public_path
+     */
+    public function __construct(Worker $worker, $container, $logger, $app_path, $public_path)
     {
         static::$_worker = $worker;
+        static::$_container = $container;
         static::$_logger = $logger;
-        static::$instance = $this;
-        $this->instance('app', $this);
-        $this->instance(Container::class, $this);
+        static::$_publicPath = $public_path;
+        // Phar Support.
+        if (class_exists(\Phar::class, false) && \Phar::running()) {
+            static::$_appPath = $app_path;
+        } else {
+            static::$_appPath = \realpath($app_path);
+        }
+
+        static::$_supportStaticFiles = Config::get('static.enable', true);
+        static::$_supportPHPFiles = Config::get('app.support_php_files', false);
     }
 
     /**
@@ -79,7 +124,6 @@ class Application extends Container
      */
     public function onMessage(TcpConnection $connection, $request)
     {
-
         try {
             static::$_request = $request;
             static::$_connection = $connection;
@@ -95,9 +139,9 @@ class Application extends Container
                 return null;
             }
 
-//            if (static::findFile($connection, $path, $key, $request)) {
-//                return null;
-//            }
+            if (static::findFile($connection, $path, $key, $request)) {
+                return null;
+            }
 
             if (static::findRoute($connection, $path, $key, $request)) {
                 return null;
@@ -144,10 +188,9 @@ class Application extends Container
     protected static function getFallback()
     {
         // when route, controller and action not found, try to use Route::fallback
-        // 当找不到路由、控制器和操作时，请尝试使用route:：fallback
         return Route::getFallback()
             ?: function () {
-                return res('route error', '路径不存在');
+                return new Response(404, [], \file_get_contents(static::$_publicPath . '/404.html'));
             };
     }
 
@@ -159,17 +202,21 @@ class Application extends Container
     protected static function exceptionResponse(\Throwable $e, $request)
     {
         try {
+            $app = $request->app ?: '';
+            $exception_config = Config::get('exception');
+            $default_exception = $exception_config[''] ?? ExceptionHandler::class;
+            $exception_handler_class = $exception_config[$app] ?? $default_exception;
+
             /** @var ExceptionHandlerInterface $exception_handler */
-            $exception_handler = app()->makeWith(Handler::class, [
+            $exception_handler = static::$_container->make($exception_handler_class, [
                 'logger' => static::$_logger,
-                'debug'  => config('app.debug')
+                'debug'  => Config::get('app.debug')
             ]);
             $exception_handler->report($e);
-
-            return $exception_handler->render($request, $e);
-
+            $response = $exception_handler->render($request, $e);
+            return $response;
         } catch (\Throwable $e) {
-            return config('app.debug') ? (string)$e : $e->getMessage();
+            return Config::get('app.debug') ? (string)$e : $e->getMessage();
         }
     }
 
@@ -188,7 +235,7 @@ class Application extends Container
         if ($route) {
             $route_middlewares = \array_reverse($route->getMiddleware());
             foreach ($route_middlewares as $class_name) {
-                $middlewares[] = [Application::container()->get($class_name), 'process'];
+                $middlewares[] = [App::container()->get($class_name), 'process'];
             }
         }
         $middlewares = \array_merge($middlewares, Middleware::getMiddleware($app, $with_global_middleware));
@@ -231,7 +278,7 @@ class Application extends Container
      */
     public static function container()
     {
-        return static::$instance;
+        return static::$_container;
     }
 
     /**
@@ -298,43 +345,43 @@ class Application extends Container
      * @param $request
      * @return bool
      */
-//    protected static function findFile($connection, $path, $key, $request)
-//    {
-//        $public_dir = static::$_publicPath;
-//        $file = "$public_dir/$path";
-//
-//        if (!\is_file($file)) {
-//            return false;
-//        }
-//
-//        if (\pathinfo($file, PATHINFO_EXTENSION) === 'php') {
-//            if (!static::$_supportPHPFiles) {
-//                return false;
-//            }
-//            static::$_callbacks[$key] = [function ($request) use ($file) {
-//                return static::execPhpFile($file);
-//            }, '', '', '', null];
-//            [$callback, $request->app, $request->controller, $request->action, $request->route] = static::$_callbacks[$key];
-//            static::send($connection, static::execPhpFile($file), $request);
-//            return true;
-//        }
-//
-//        if (!static::$_supportStaticFiles) {
-//            return false;
-//        }
-//
-//        static::$_callbacks[$key] = [static::getCallback('__static__', function ($request) use ($file) {
-//            \clearstatcache(true, $file);
-//            if (!\is_file($file)) {
-//                $callback = static::getFallback();
-//                return $callback($request);
-//            }
-//            return (new Response())->file($file);
-//        },                                               null, false), '', '', '', null];
-//        [$callback, $request->app, $request->controller, $request->action, $request->route] = static::$_callbacks[$key];
-//        static::send($connection, $callback($request), $request);
-//        return true;
-//    }
+    protected static function findFile($connection, $path, $key, $request)
+    {
+        $public_dir = static::$_publicPath;
+        $file = "$public_dir/$path";
+
+        if (!\is_file($file)) {
+            return false;
+        }
+
+        if (\pathinfo($file, PATHINFO_EXTENSION) === 'php') {
+            if (!static::$_supportPHPFiles) {
+                return false;
+            }
+            static::$_callbacks[$key] = [function ($request) use ($file) {
+                return static::execPhpFile($file);
+            }, '', '', '', null];
+            [$callback, $request->app, $request->controller, $request->action, $request->route] = static::$_callbacks[$key];
+            static::send($connection, static::execPhpFile($file), $request);
+            return true;
+        }
+
+        if (!static::$_supportStaticFiles) {
+            return false;
+        }
+
+        static::$_callbacks[$key] = [static::getCallback('__static__', function ($request) use ($file) {
+            \clearstatcache(true, $file);
+            if (!\is_file($file)) {
+                $callback = static::getFallback();
+                return $callback($request);
+            }
+            return (new Response())->file($file);
+        },                                               null, false), '', '', '', null];
+        [$callback, $request->app, $request->controller, $request->action, $request->route] = static::$_callbacks[$key];
+        static::send($connection, $callback($request), $request);
+        return true;
+    }
 
     /**
      * @param TcpConnection $connection
@@ -416,7 +463,7 @@ class Application extends Container
      */
     protected static function getControllerAction($controller_class, $action)
     {
-        if (static::loadController($controller_class) && ($controller_class = (new \ReflectionClass($controller_class))->name) && \is_callable([$instance = static::$instance->get($controller_class), $action])) {
+        if (static::loadController($controller_class) && ($controller_class = (new \ReflectionClass($controller_class))->name) && \is_callable([$instance = static::$_container->get($controller_class), $action])) {
             return [
                 'app'        => static::getAppByController($controller_class),
                 'controller' => $controller_class,
@@ -435,7 +482,7 @@ class Application extends Container
     {
         static $controller_files = [];
         if (empty($controller_files)) {
-            $app_path = app_path();
+            $app_path = static::$_appPath;
             $dir_iterator = new \RecursiveDirectoryIterator($app_path);
             $iterator = new \RecursiveIteratorIterator($dir_iterator);
             $app_base_path_length = \strrpos($app_path, DIRECTORY_SEPARATOR) + 1;

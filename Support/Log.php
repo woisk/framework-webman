@@ -23,7 +23,7 @@ use Monolog\Logger;
 
 /**
  * Class Log
- * @package Webman\Support
+ * @package Support
  *
  * @method static void log($level, $message, array $context = [])
  * @method static void debug($message, array $context = [])
